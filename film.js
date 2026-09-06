@@ -1,5 +1,5 @@
 // Frame-indexed reference plates retain the supplied film's exact gradient and UI motion.
-// The 180 unique source plates are time-remapped across the full 15-second ARGUS Engineer film once.
+// Motion segments run at their native 24 fps. Extra time is added as intentional holds between scenes.
 // Text replacements remain authored and editable in this Hyperframes composition.
 const canvas=document.getElementById('film');let ctx=canvas.getContext('2d');
 const titleLayer=document.createElement('canvas');titleLayer.width=1920;titleLayer.height=1080;
@@ -8,19 +8,40 @@ const ready=Promise.all([document.fonts.load('400 100px Switzer'),document.fonts
 const cache=new Map();
 async function plate(frame){if(cache.has(frame))return cache.get(frame);const img=new Image();img.src=`assets/plates/${String(frame).padStart(3,'0')}.png`;await img.decode();cache.set(frame,img);if(cache.size>4)cache.delete(cache.keys().next().value);return img}
 function type(s,x,y,size,color='#202020',align='left',weight=400,blur=0,maxWidth){
- ctx.save();
- let drawSize=size;
- ctx.font=`${weight} ${drawSize}px Switzer,Arial`;
+ ctx.save();let drawSize=size;ctx.font=`${weight} ${drawSize}px Switzer,Arial`;
  if(maxWidth){const measured=ctx.measureText(s).width;if(measured>maxWidth){drawSize*=maxWidth/measured;ctx.font=`${weight} ${drawSize}px Switzer,Arial`;}}
  ctx.textBaseline='alphabetic';ctx.textAlign=align;ctx.fillStyle=color;ctx.filter=blur?`blur(${blur}px)`:'none';ctx.fillText(s,x,y);ctx.restore();
 }
 function gradient(x0,x1,a,b){const g=ctx.createLinearGradient(x0,0,x1,0);g.addColorStop(0,a);g.addColorStop(1,b);return g}
+const pacing=[
+ {a:0,b:21,hold:1.00},
+ {a:22,b:44,hold:.75},
+ {a:45,b:67,hold:1.00},
+ {a:68,b:71,hold:0},
+ {a:72,b:106,hold:1.25},
+ {a:107,b:133,hold:.50},
+ {a:134,b:160,hold:2.00},
+ {a:161,b:179,hold:1.00},
+];
+function sourceFrameAt(time){
+ let t=clamp(time/15)*15;
+ let cursor=0;
+ for(const seg of pacing){
+  const motion=(seg.b-seg.a+1)/24;
+  if(t<cursor+motion)return Math.min(seg.b,seg.a+Math.floor((t-cursor)*24));
+  cursor+=motion;
+  if(t<cursor+seg.hold)return seg.b;
+  cursor+=seg.hold;
+ }
+ return 179;
+}
+function coverCloseupHeading(center){
+ const g=ctx.createLinearGradient(center-720,0,1920,0);g.addColorStop(0,'rgba(255,255,255,.985)');g.addColorStop(.72,'rgba(255,255,255,.97)');g.addColorStop(1,'rgba(244,250,255,.96)');
+ ctx.save();ctx.fillStyle=g;ctx.fillRect(Math.max(0,center-720),205,Math.min(1920,center+700)-Math.max(0,center-720),118);ctx.restore();
+}
 async function drawFrame(time){
  await ready;
- const duration=15;
- const progress=clamp(time/duration);
- const f=Math.min(179,Math.max(0,Math.round(progress*179)));
- const track=window.referenceTracks[f];const img=await plate(f);ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,1920,1080);ctx.drawImage(img,0,0);
+ const f=sourceFrameAt(time),track=window.referenceTracks[f],img=await plate(f);ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,1920,1080);ctx.drawImage(img,0,0);
  if(f<22){
   const main=ctx;ctx=titleLayer.getContext('2d');ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,1920,1080);
   const scale=1+.10*Math.exp(-f/3);ctx.save();ctx.translate(960,550);ctx.scale(scale,scale);
@@ -29,23 +50,38 @@ async function drawFrame(time){
   type('ARGUS Engineer',0,74,184,g,'center',600,Math.max(0,7-f*1.5),1370);ctx.restore();
   if(f<7){ctx.save();ctx.globalCompositeOperation='destination-in';const edge=580+f*185;const mask=ctx.createLinearGradient(edge-180,0,edge+150,0);mask.addColorStop(0,'black');mask.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=mask;ctx.fillRect(0,0,1920,1080);ctx.restore();}
   ctx=main;ctx.drawImage(titleLayer,0,0);
- }else if(f>=45&&f<72){
+ }else if(f<45){
+  // This source scene is a flat blue title card; replace the baked-in AI wording completely.
+  ctx.fillStyle='#0866F5';ctx.fillRect(0,0,1920,1080);
+  const label=f<29?'Design':f<36?'Design —':'Design — autonomously';
+  const blur=f<25?(25-f)*1.8:0;type(label,960,615,142,'#fff','center',400,blur,1500);
+ }else if(f<72){
   const scale=track.promptScale,left=track.promptLeft,blur=f>=68?(f-67)*1.5:0;
   const center=left+660*scale;
   const color=f<64?gradient(left+100+Math.max(0,(f-50)*35),left+1230*scale,'#191c1d','#6caed1'):'#171a1b';
-  ctx.save();ctx.globalAlpha=clamp((f-45)/8);
-  type('Your autonomous engineer for the physical world',center,track.headingY,46*scale,color,'center',400,blur);ctx.restore();
+  ctx.save();ctx.globalAlpha=clamp((f-45)/8);type('Give ARGUS something to engineer',center,track.headingY,47*scale,color,'center',400,blur,980*scale);ctx.restore();
   ctx.save();ctx.globalAlpha=clamp((f-46)/7);ctx.font=`${32*scale}px monospace`;ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='#828282';ctx.filter=blur?`blur(${blur}px)`:'none';ctx.fillText('Design a 30 m pedestrian bridge',left+43*scale,540);ctx.restore();
- }else if(f>=72&&f<107){
-  const x=track.left+85;const n=Math.max(0,Math.floor((f-72)*.67));const s='Engineer it with ARGUS'.slice(0,n);
-  const blur=f<76?(76-f)*2:0;type(s,x,513,64,'#181a1b','left',400,blur);
-  ctx.save();ctx.font='400 64px Switzer';const w=ctx.measureText(s).width;ctx.fillStyle='#40a2d4';ctx.filter=blur?`blur(${blur}px)`:'none';ctx.fillRect(x+w+12,463,7,57);ctx.restore();
- }else if(f>=134&&f<161){
+ }else if(f<107){
+  const center=track.left+660;coverCloseupHeading(center);
+  const headingBlur=f<76?(76-f)*1.6:0;type('Give ARGUS something to engineer',center,292,52,'#181a1b','center',400,headingBlur,920);
+  const x=track.left+85;const target='Design a 30 m pedestrian bridge';const n=Math.max(0,Math.floor((f-72)*.95));const s=target.slice(0,n);
+  const blur=f<76?(76-f)*2:0;type(s,x,513,58,'#181a1b','left',400,blur);
+  ctx.save();ctx.font='400 58px Switzer';const w=ctx.measureText(s).width;ctx.fillStyle='#40a2d4';ctx.filter=blur?`blur(${blur}px)`:'none';ctx.fillRect(x+w+10,466,7,52);ctx.restore();
+ }else if(f<134){
+  // The original reference bakes ChatGPT copy inside this zoomed submit field. Clean it and keep the task consistent.
+  const p=(f-107)/(133-107);const baseline=500-104*p;const right=1410-105*Math.min(1,p*1.35);const blur=f<111?(111-f)*1.6:f>130?(f-130)*1.5:0;
+  ctx.save();ctx.fillStyle='rgba(255,255,255,.985)';ctx.fillRect(0,baseline-61,930,88);ctx.restore();
+  type('Design a 30 m pedestrian bridge',right-1460,baseline,58,'#202020','left',400,blur);
+ }else if(f<161){
   const y=track.resultOffset,blur=Math.max(0,(138-f)*1.7);const h=track.heading;
-  type('Give ARGUS something to engineer',h?h[0]:488,y+214,42,'#7d7d7d','left',400,blur);
-  const rows=[['Design against real constraints','Codes, loads, cost, geometry, and safety.'],['Operate engineering tools','Model, simulate, calculate, and iterate.'],['Verify every design','Critique the work until the bar is met.']];
-  rows.forEach((r,i)=>{type(r[0],807,y+391+i*196,49,'#2b2b2b','left',400,blur);type(r[1],807,y+442+i*196,37,'#858585','left',400,blur)});
- }else if(f>=161){type('ARGUS Engineer.',966,553,53,'#0d2d48','center',600)}
+  type('ARGUS engineered the bridge',h?h[0]:488,y+214,42,'#7d7d7d','left',400,blur);
+  const rows=[
+   ['Structural model complete','Loads, geometry, materials, and constraints resolved.'],
+   ['512 designs evaluated','Weight, cost, and deflection optimized together.'],
+   ['Independent verification passed','Fresh checks confirm the project bar is met.']
+  ];
+  rows.forEach((r,i)=>{type(r[0],807,y+391+i*196,49,'#2b2b2b','left',400,blur,900);type(r[1],807,y+442+i*196,36,'#858585','left',400,blur,940)});
+ }else{type('ARGUS Engineer.',966,553,53,'#0d2d48','center',600)}
 }
 window.addEventListener('hf-seek',event=>{const promise=drawFrame(event.detail.time);event.detail.waitUntil?.(promise)});
 window.drawFrame=drawFrame;void drawFrame(0);
