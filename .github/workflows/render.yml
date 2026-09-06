@@ -1,4 +1,4 @@
-name: Render video
+name: Render ARGUS Engineer video
 on:
   workflow_dispatch:
     inputs:
@@ -30,8 +30,8 @@ jobs:
         run: npm run render
       - uses: actions/upload-artifact@v4
         with:
-          name: chatgpt-blue-render
+          name: argus-engineer-render
           path: |
-            output/chatgpt-blue.mp4
+            output/argus-engineer.mp4
             output/verification.json
           if-no-files-found: error

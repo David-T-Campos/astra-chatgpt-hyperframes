@@ -1,5 +1,5 @@
 import path from 'node:path';import fs from 'node:fs';import {fileURLToPath} from 'node:url';import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';
-const root=fileURLToPath(new URL('../',import.meta.url));const file=path.resolve(root,process.argv[2]||'output/chatgpt-blue.mp4');
+const root=fileURLToPath(new URL('../',import.meta.url));const file=path.resolve(root,process.argv[2]||'output/argus-engineer.mp4');
 const run=(cmd,args)=>execFileSync(cmd,args,{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024});
 const probe=JSON.parse(run('ffprobe',['-v','error','-count_frames','-show_entries','stream=codec_type,width,height,avg_frame_rate,nb_read_frames,duration','-of','json',file]));
 const v=probe.streams.find(x=>x.codec_type==='video'),a=probe.streams.find(x=>x.codec_type==='audio');

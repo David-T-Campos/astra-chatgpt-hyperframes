@@ -1,9 +1,9 @@
 {
-  "name": "astra-chatgpt-hyperframes",
+  "name": "argus-engineer-hyperframes",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Reproducible Hyperframes source for a ChatGPT adaptation of Rajmoni\u2019s reference animation.",
+  "description": "Reproducible Hyperframes source for an ARGUS Engineer adaptation of Rajmoni’s reference animation.",
   "engines": {
     "node": ">=22"
   },
