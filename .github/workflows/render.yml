@@ -23,8 +23,12 @@ jobs:
         with:
           node-version: '25.5.0'
           cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: python3 -m pip install -r requirements.txt
       - run: npm ci --ignore-scripts
       - run: npm run setup -- --accept-font-license
       - name: Render with installed Chrome
