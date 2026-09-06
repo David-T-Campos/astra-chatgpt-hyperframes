@@ -1,0 +1,18 @@
+{
+  "frames": 360,
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "fullDecode": true,
+  "audioPacketsUnchanged": true,
+  "sha256": "dd6b143803825ab8499fedf120a7ca8f41c037bd83c3b18ca543a8b730ac3e6b",
+  "freshNpmInstall": true,
+  "hyperframes": "0.8.29",
+  "node": "v25.5.0",
+  "platform": "macOS arm64",
+  "referenceDecodedVideoHash": "SHA256=9e3744ce20ae06f93d6587257fbc45905518ca704fdb2ff9e53a00c648a80798",
+  "renderDecodedVideoHash": "SHA256=9e3744ce20ae06f93d6587257fbc45905518ca704fdb2ff9e53a00c648a80798",
+  "decodedFramesExactlyMatchDeliveredVideo": true,
+  "encodedFileExactlyMatchesDeliveredVideo": true,
+  "scope": "Measured on this test environment; cross-platform font rasterization and encoder builds may differ."
+}

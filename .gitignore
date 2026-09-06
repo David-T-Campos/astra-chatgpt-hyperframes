@@ -1,0 +1,9 @@
+node_modules/
+output/
+assets/Switzer-Variable.woff2
+.env
+.env.*
+*.log
+.DS_Store
+__pycache__/
+*.pyc

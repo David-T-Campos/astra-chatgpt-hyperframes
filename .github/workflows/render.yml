@@ -1,0 +1,37 @@
+name: Render video
+on:
+  workflow_dispatch:
+    inputs:
+      accept_font_license:
+        description: 'I have read and accept the linked Fontshare license in README.md'
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  render:
+    if: ${{ inputs.accept_font_license }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25.5.0'
+          cache: npm
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci --ignore-scripts
+      - run: npm run setup -- --accept-font-license
+      - name: Render with installed Chrome
+        env:
+          HYPERFRAMES_BROWSER_PATH: /usr/bin/google-chrome
+        run: npm run render
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chatgpt-blue-render
+          path: |
+            output/chatgpt-blue.mp4
+            output/verification.json
+          if-no-files-found: error

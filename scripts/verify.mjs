@@ -1,0 +1,13 @@
+import path from 'node:path';import fs from 'node:fs';import {fileURLToPath} from 'node:url';import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';
+const root=fileURLToPath(new URL('../',import.meta.url));const file=path.resolve(root,process.argv[2]||'output/chatgpt-blue.mp4');
+const run=(cmd,args)=>execFileSync(cmd,args,{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024});
+const probe=JSON.parse(run('ffprobe',['-v','error','-count_frames','-show_entries','stream=codec_type,width,height,avg_frame_rate,nb_read_frames,duration','-of','json',file]));
+const v=probe.streams.find(x=>x.codec_type==='video'),a=probe.streams.find(x=>x.codec_type==='audio');
+if(!v||v.width!==1920||v.height!==1080||v.avg_frame_rate!=='24/1'||v.nb_read_frames!=='360')throw new Error('Unexpected video dimensions, rate or frame count.');
+if(!a||Math.abs(Number(a.duration)-15.061333)>.025)throw new Error('Missing or truncated reference audio.');
+run('ffmpeg',['-v','error','-xerror','-i',file,'-f','null','-']);
+const audio=p=>run('ffmpeg',['-v','error','-i',p,'-map','0:a:0','-c','copy','-f','hash','-hash','sha256','-']).trim();
+if(audio(file)!==audio('assets/reference.m4a'))throw new Error('Reference audio packets changed.');
+fs.mkdirSync(path.join(root,'output'),{recursive:true});
+const report={frames:360,width:1920,height:1080,fps:24,fullDecode:true,audioPacketsUnchanged:true,sha256:createHash('sha256').update(fs.readFileSync(file)).digest('hex')};
+fs.writeFileSync(path.join(root,'output','verification.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));

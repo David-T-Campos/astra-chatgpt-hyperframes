@@ -1,0 +1,22 @@
+{
+  "name": "astra-chatgpt-hyperframes",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reproducible Hyperframes source for a ChatGPT adaptation of Rajmoni\u2019s reference animation.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "preview": "hyperframes preview .",
+    "lint": "hyperframes lint .",
+    "check": "node scripts/check.mjs",
+    "render": "node scripts/render.mjs",
+    "verify": "node scripts/verify.mjs",
+    "compare": "node scripts/compare.mjs"
+  },
+  "dependencies": {
+    "hyperframes": "0.8.29"
+  }
+}
