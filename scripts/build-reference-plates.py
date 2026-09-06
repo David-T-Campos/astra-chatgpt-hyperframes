@@ -9,6 +9,7 @@ cap=cv2.VideoCapture(str(ROOT/'reference/original.mp4'))
 tracks=[]
 def clear_rect(f,rect):
  x0,y0,x1,y1=map(int,rect);x0=max(0,x0);x1=min(1920,x1);y0=max(1,y0);y1=min(1079,y1)
+ if x1<=x0 or y1<=y0:return
  top=f[y0-1:y0,x0:x1].astype(float);bot=f[y1:y1+1,x0:x1].astype(float)
  blend=np.linspace(0,1,y1-y0)[:,None,None];f[y0:y1,x0:x1]=np.uint8(top*(1-blend)+bot*blend)
 def bbox(f,rect,limit=205):
@@ -26,12 +27,13 @@ for i in range(180):
   t=np.linspace(0,1,y1-y0)[:,None,None];h=y1-y0
   fill=(2*t**3-3*t**2+1)*a+(t**3-2*t**2+t)*h*da+(-2*t**3+3*t**2)*b+(t**3-t**2)*h*db
   f[y0:y1,x0:x1]=np.uint8(np.clip(fill,0,255))
+ elif i<45:
+  # This scene is a flat blue field. Remove all baked title lettering completely.
+  color=original[120,120]
+  f[300:760,250:1670]=color
  elif 45<=i<72:
   # Recover the input's left border from its darkest vertical edge.
   left=int(np.argmin(original[570,200:1000].mean(1))+200)
-  scale=min(1.025,max(.72,(665-(495 if i<53 else 484))/181))
-  # Top edge moves gently upward during zoom; text remains inside its outline.
-  header=bbox(original,(max(350,left+100),390,1920,472),230)
   tr['promptLeft']=left
   tr['promptScale']=float(np.interp(i,[45,50,53,60,66,71],[.72,.8,.91,1,1.02,1.025]))
   tr['headingY']=float(np.interp(i,[45,50,53,60,66,71],[473,470,462,453,451,451]))
@@ -44,7 +46,15 @@ for i in range(180):
   row=original[555].astype(int)
   left=int(np.argmax((row[:,0]-row[:,2])[300:1000])+300)
   tr['left']=left
+  # Clear the close-up heading and the typed prompt while preserving the input outline.
+  heading=bbox(original,(500,170,1920,350),215)
+  if heading:clear_rect(f,(max(480,heading[0]-45),max(165,heading[1]-24),1919,min(360,heading[3]+24)))
   clear_rect(f,(left+65,442,1919,545))
+ elif 107<=i<134:
+  # Submit-button close-up: remove only the baked prompt text. Keep border, button, cursor, blur and camera motion.
+  text=bbox(original,(0,280,980,570),205)
+  tr['submitText']=text
+  if text:clear_rect(f,(max(0,text[0]-35),max(285,text[1]-18),min(970,text[2]+35),min(565,text[3]+18)))
  elif 134<=i<161:
   col=original[80:350,1850];active=np.where(col.min(1)>249)[0]
   cardtop=int(active[0]+80) if len(active) else 125
