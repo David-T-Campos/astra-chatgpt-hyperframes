@@ -7,14 +7,11 @@ on:
         required: true
         type: boolean
         default: false
-  push:
-    branches:
-      - main
 permissions:
   contents: read
 jobs:
   render:
-    if: ${{ github.event_name == 'push' || inputs.accept_font_license }}
+    if: ${{ inputs.accept_font_license }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
