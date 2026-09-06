@@ -38,3 +38,4 @@ jobs:
             output/argus-engineer.mp4
             output/verification.json
           if-no-files-found: error
+# Render trigger after Actions enablement.
