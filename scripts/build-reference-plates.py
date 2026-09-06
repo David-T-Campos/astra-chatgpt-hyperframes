@@ -32,29 +32,33 @@ for i in range(180):
   color=original[120,120]
   f[300:760,250:1670]=color
  elif 45<=i<72:
-  # Recover the input's left border from its darkest vertical edge.
   left=int(np.argmin(original[570,200:1000].mean(1))+200)
   tr['promptLeft']=left
   tr['promptScale']=float(np.interp(i,[45,50,53,60,66,71],[.72,.8,.91,1,1.02,1.025]))
   tr['headingY']=float(np.interp(i,[45,50,53,60,66,71],[473,470,462,453,451,451]))
-  # Remove complete text rows, keeping both vertical borders intact.
   hx=max(250,left+70);f[392:478,hx:1920]=original[385:386,hx:1920]
   tx=left+30;end=min(1919,left+1200);start=498 if i<50 else 505
   f[start:582,tx:end]=original[583:584,tx:end]
  elif 72<=i<107:
-  # Locate left blue border on the flat middle of the input outline.
   row=original[555].astype(int)
   left=int(np.argmax((row[:,0]-row[:,2])[300:1000])+300)
   tr['left']=left
-  # Clear the close-up heading and the typed prompt while preserving the input outline.
   heading=bbox(original,(500,170,1920,350),215)
   if heading:clear_rect(f,(max(480,heading[0]-45),max(165,heading[1]-24),1919,min(360,heading[3]+24)))
   clear_rect(f,(left+65,442,1919,545))
  elif 107<=i<134:
-  # Submit-button close-up: remove only the baked prompt text. Keep border, button, cursor, blur and camera motion.
+  # Submit-button close-up: replace only the baked prompt lettering using a clean sample from the same input interior.
   text=bbox(original,(0,280,980,570),205)
   tr['submitText']=text
-  if text:clear_rect(f,(max(0,text[0]-35),max(285,text[1]-18),min(970,text[2]+35),min(565,text[3]+18)))
+  if text:
+   x0=max(0,text[0]-35);y0=max(285,text[1]-18);x1=min(970,text[2]+35);y1=min(565,text[3]+18)
+   sample_x0=min(860,max(620,x1+80));sample_x1=min(960,sample_x0+120)
+   sample=original[y0:y1,sample_x0:sample_x1]
+   if sample.size:
+    color=np.median(sample.reshape(-1,3),axis=0).astype(np.uint8)
+    f[y0:y1,x0:x1]=color
+   else:
+    f[y0:y1,x0:x1]=np.array([250,250,250],dtype=np.uint8)
  elif 134<=i<161:
   col=original[80:350,1850];active=np.where(col.min(1)>249)[0]
   cardtop=int(active[0]+80) if len(active) else 125
