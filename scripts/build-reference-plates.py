@@ -15,12 +15,26 @@ def clear_rect(f,rect):
 def bbox(f,rect,limit=205):
  x0,y0,x1,y1=rect;roi=f[y0:y1,x0:x1];m=np.max(roi,axis=2)<limit;ys,xs=np.where(m)
  return [int(xs.min()+x0),int(ys.min()+y0),int(xs.max()+x0+1),int(ys.max()+y0+1)] if len(xs) else None
+def inpaint_submit_text(frame):
+ # Remove small dark glyph components from the left/interior of the submit field,
+ # while ignoring the long blue outline and the button/cursor.
+ x0,y0,x1,y1=0,285,900,565
+ roi=frame[y0:y1,x0:x1]
+ gray=cv2.cvtColor(roi,cv2.COLOR_BGR2GRAY)
+ raw=np.uint8(gray<210)*255
+ n,labels,stats,_=cv2.connectedComponentsWithStats(raw,8)
+ mask=np.zeros_like(raw)
+ for k in range(1,n):
+  x,y,w,h,area=stats[k]
+  if 2<=w<=180 and 5<=h<=90 and 8<=area<=3500:
+   mask[labels==k]=255
+ if np.any(mask):
+  mask=cv2.dilate(mask,np.ones((5,5),np.uint8),iterations=1)
+  frame[y0:y1,x0:x1]=cv2.inpaint(roi,mask,3,cv2.INPAINT_TELEA)
 for i in range(180):
  ok,original=cap.read();assert ok;f=original.copy();tr={'frame':i}
- # Background at the logo is locally uniform; preserve underlying faint grid.
  f[18:104,20:310]=f[108:194,20:310]
  if i<22:
-  # Smooth cubic continuation of the gradient behind the original title.
   x0,x1,y0,y1=300,1600,418,692
   a=f[y0,x0:x1].astype(float);b=f[y1,x0:x1].astype(float)
   da=(a-f[y0-30,x0:x1].astype(float))/30;db=(f[y1+30,x0:x1].astype(float)-b)/30
@@ -28,9 +42,7 @@ for i in range(180):
   fill=(2*t**3-3*t**2+1)*a+(t**3-2*t**2+t)*h*da+(-2*t**3+3*t**2)*b+(t**3-t**2)*h*db
   f[y0:y1,x0:x1]=np.uint8(np.clip(fill,0,255))
  elif i<45:
-  # This scene is a flat blue field. Remove all baked title lettering completely.
-  color=original[120,120]
-  f[300:760,250:1670]=color
+  color=original[120,120];f[300:760,250:1670]=color
  elif 45<=i<72:
   left=int(np.argmin(original[570,200:1000].mean(1))+200)
   tr['promptLeft']=left
@@ -47,18 +59,7 @@ for i in range(180):
   if heading:clear_rect(f,(max(480,heading[0]-45),max(165,heading[1]-24),1919,min(360,heading[3]+24)))
   clear_rect(f,(left+65,442,1919,545))
  elif 107<=i<134:
-  # Submit-button close-up: replace only the baked prompt lettering using a clean sample from the same input interior.
-  text=bbox(original,(0,280,980,570),205)
-  tr['submitText']=text
-  if text:
-   x0=max(0,text[0]-35);y0=max(285,text[1]-18);x1=min(970,text[2]+35);y1=min(565,text[3]+18)
-   sample_x0=min(860,max(620,x1+80));sample_x1=min(960,sample_x0+120)
-   sample=original[y0:y1,sample_x0:sample_x1]
-   if sample.size:
-    color=np.median(sample.reshape(-1,3),axis=0).astype(np.uint8)
-    f[y0:y1,x0:x1]=color
-   else:
-    f[y0:y1,x0:x1]=np.array([250,250,250],dtype=np.uint8)
+  inpaint_submit_text(f)
  elif 134<=i<161:
   col=original[80:350,1850];active=np.where(col.min(1)>249)[0]
   cardtop=int(active[0]+80) if len(active) else 125
