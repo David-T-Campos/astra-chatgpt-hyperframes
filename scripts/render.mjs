@@ -15,5 +15,5 @@ if(files.length!==360||files[0]!=='frame_000001.png'||files[359]!=='frame_000360
 const partial=path.join(work,'video.mp4');
 run('ffmpeg',['-v','error','-y','-framerate','24','-start_number','1','-i',path.join(frames,'frame_%06d.png'),'-i','assets/reference.m4a','-map','0:v:0','-map','1:a:0','-vf','scale=in_range=pc:out_range=tv:out_color_matrix=bt709,format=yuv420p','-c:v','libx264','-crf','16','-preset','medium','-color_range','tv','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-c:a','copy','-movflags','+faststart',partial]);
 run(process.execPath,['scripts/verify.mjs',partial]);
-fs.copyFileSync(partial,path.join(root,'output','chatgpt-blue.mp4'));fs.rmSync(work,{recursive:true,force:true});
-console.log('Verified output/chatgpt-blue.mp4');
+fs.copyFileSync(partial,path.join(root,'output','argus-engineer.mp4'));fs.rmSync(work,{recursive:true,force:true});
+console.log('Verified output/argus-engineer.mp4');
