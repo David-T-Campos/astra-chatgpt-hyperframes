@@ -1,0 +1,88 @@
+name: Publish 1517 Film 01
+
+on:
+  push:
+    branches:
+      - 1517-materials
+    paths:
+      - .github/workflows/publish-1517-film.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-film:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 1517-materials
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Reconstruct existing Film 01 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, urllib.request
+          urls = [
+              'https://argus-film-final-00.vercel.app/chunk.txt',
+              'https://argus-film-chunk.vercel.app/chunk.txt',
+              'https://argus-film-final-02.vercel.app/chunk.txt',
+          ]
+          data = ''.join(
+              ''.join(urllib.request.urlopen(url, timeout=60).read().decode('utf-8').split())
+              for url in urls
+          )
+          raw = base64.b64decode(data, validate=True)
+          open('/tmp/film-01-source.mp4', 'wb').write(raw)
+          print(f'Reconstructed {len(raw):,} bytes')
+          PY
+          ffprobe -v error -show_entries format=duration -of default=nw=1 /tmp/film-01-source.mp4
+
+      - name: Transcode for Safari and iOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p 1517-materials/media
+          ffmpeg -y -i /tmp/film-01-source.mp4 \
+            -vf "scale='min(1280,iw)':-2:flags=lanczos" \
+            -c:v libx264 -profile:v baseline -level:v 3.1 -pix_fmt yuv420p \
+            -preset medium -crf 22 -g 60 -keyint_min 30 -sc_threshold 0 \
+            -c:a aac -profile:a aac_low -b:a 96k -ac 2 -ar 44100 \
+            -movflags +faststart \
+            1517-materials/media/film-01.mp4
+
+      - name: Verify complete decode
+        shell: bash
+        run: |
+          set -euo pipefail
+          ffmpeg -v error -i 1517-materials/media/film-01.mp4 -f null -
+          ffprobe -v error \
+            -select_streams v:0 \
+            -show_entries stream=codec_name,profile,pix_fmt,width,height,level \
+            -of default=nw=1 \
+            1517-materials/media/film-01.mp4
+          ffprobe -v error \
+            -select_streams a:0 \
+            -show_entries stream=codec_name,profile,sample_rate,channels \
+            -of default=nw=1 \
+            1517-materials/media/film-01.mp4
+
+      - name: Commit verified static MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 1517-materials/media/film-01.mp4
+          if git diff --cached --quiet; then
+            echo 'Film already up to date.'
+            exit 0
+          fi
+          git commit -m 'Publish Safari-safe Film 01'
+          git push origin HEAD:1517-materials
