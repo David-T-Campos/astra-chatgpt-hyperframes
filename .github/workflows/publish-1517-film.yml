@@ -20,8 +20,11 @@ jobs:
         with:
           ref: 1517-materials
 
-      - name: Install FFmpeg
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Verify FFmpeg
+        run: |
+          command -v ffmpeg
+          command -v ffprobe
+          ffmpeg -version | head -1
 
       - name: Reconstruct existing Film 01 source
         shell: bash
@@ -42,21 +45,17 @@ jobs:
               parts.append(text)
               print(f'part {i}: chars={len(text):,}, mod4={len(text)%4}, padding={text.count("=")}')
 
-          # Candidate 1: the files are independently base64-encoded binary slices.
           decoded_parts = []
           for text in parts:
               padded = text + ('=' * ((-len(text)) % 4))
               decoded_parts.append(base64.b64decode(padded, validate=False))
           raw_parts = b''.join(decoded_parts)
           open('/tmp/candidate-parts.mp4', 'wb').write(raw_parts)
-          print(f'candidate-parts: {len(raw_parts):,} bytes')
 
-          # Candidate 2: the files are slices of one continuous base64 stream.
           continuous = ''.join(parts).replace('=', '')
           continuous += '=' * ((-len(continuous)) % 4)
           raw_joined = base64.b64decode(continuous, validate=False)
           open('/tmp/candidate-joined.mp4', 'wb').write(raw_joined)
-          print(f'candidate-joined: {len(raw_joined):,} bytes')
           PY
 
           choose_candidate() {
@@ -93,16 +92,6 @@ jobs:
         run: |
           set -euo pipefail
           ffmpeg -v error -i 1517-materials/media/film-01.mp4 -f null -
-          ffprobe -v error \
-            -select_streams v:0 \
-            -show_entries stream=codec_name,profile,pix_fmt,width,height,level \
-            -of default=nw=1 \
-            1517-materials/media/film-01.mp4
-          ffprobe -v error \
-            -select_streams a:0 \
-            -show_entries stream=codec_name,profile,sample_rate,channels \
-            -of default=nw=1 \
-            1517-materials/media/film-01.mp4
           ffprobe -v error -show_entries format=duration,size -of default=nw=1 1517-materials/media/film-01.mp4
 
       - name: Commit verified static MP4
@@ -118,5 +107,3 @@ jobs:
           fi
           git commit -m 'Publish Safari-safe Film 01'
           git push origin HEAD:1517-materials
-
-# Retrigger 2026-09-14
