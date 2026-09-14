@@ -118,3 +118,5 @@ jobs:
           fi
           git commit -m 'Publish Safari-safe Film 01'
           git push origin HEAD:1517-materials
+
+# Retrigger 2026-09-14
