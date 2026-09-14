@@ -1,0 +1,9 @@
+{
+  "frames": 360,
+  "width": 1920,
+  "height": 1080,
+  "fps": 24,
+  "fullDecode": true,
+  "audioPacketsUnchanged": true,
+  "sha256": "2cd030a33c18f5072a356e00c25b4ba77d7905738fbf36214187f1bf050067c4"
+}
