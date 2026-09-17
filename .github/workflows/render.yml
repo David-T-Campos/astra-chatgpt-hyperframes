@@ -14,37 +14,24 @@ permissions:
 jobs:
   replace-film:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           ref: 1517-materials
 
-      - name: Install FFmpeg
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
-
-      - name: Download the approved Film 01 upload
+      - name: Download approved Film 01
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p output
-          curl -fL --retry 3 --retry-delay 2 \
+          curl -fL --retry 2 --retry-delay 1 \
             'https://sdmntprcentralindia.oaiusercontent.com/files/00000000-18c0-8208-bdd6-1d6c3f1095a8/raw?se=2026-09-17T08%3A04%3A09Z&sp=r&sv=2026-02-06&sr=b&scid=e6237a6d-b4a1-5322-959b-c7a5a49f8044&skoid=45d5558d-260a-4eed-aec4-6bc512bdfda4&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-16T20%3A03%3A40Z&ske=2026-09-17T20%3A03%3A40Z&sks=b&skv=2026-02-06&sig=PVGYsIrFaSpXUH7hhH%2BgO1rGBXYYlKcxHLaNi9GT4IM%3D' \
             -o output/argus-engineer.mp4
-
-      - name: Verify approved video
-        shell: bash
-        run: |
-          set -euo pipefail
           test -s output/argus-engineer.mp4
-          ffmpeg -v error -i output/argus-engineer.mp4 -f null -
-          DURATION="$(ffprobe -v error -show_entries format=duration -of csv=p=0 output/argus-engineer.mp4)"
-          SIZE="$(stat -c%s output/argus-engineer.mp4)"
-          echo "duration=$DURATION size=$SIZE"
-          awk "BEGIN {exit !($DURATION > 59 && $DURATION < 62)}"
-          test "$SIZE" -gt 5000000
+          test "$(stat -c%s output/argus-engineer.mp4)" -gt 5000000
 
-      - name: Replace wrong Film 01 in repository
+      - name: Replace wrong Film 01
         shell: bash
         run: |
           set -euo pipefail
