@@ -1,18 +1,19 @@
-name: Replace ARGUS Film 01 with approved upload
+name: Verify ARGUS Film 01
 
 on:
   push:
     branches:
       - 1517-materials
     paths:
+      - output/argus-engineer.mp4
       - .github/workflows/render.yml
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  replace-film:
+  verify-film:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -20,23 +21,15 @@ jobs:
         with:
           ref: 1517-materials
 
-      - name: Download approved Film 01
+      - name: Verify Film 01 hash and decode
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p output
-          curl -fL --retry 2 --retry-delay 1 \
-            'https://sdmntprcentralindia.oaiusercontent.com/files/00000000-18c0-8208-bdd6-1d6c3f1095a8/raw?se=2026-09-17T08%3A04%3A09Z&sp=r&sv=2026-02-06&sr=b&scid=e6237a6d-b4a1-5322-959b-c7a5a49f8044&skoid=45d5558d-260a-4eed-aec4-6bc512bdfda4&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-16T20%3A03%3A40Z&ske=2026-09-17T20%3A03%3A40Z&sks=b&skv=2026-02-06&sig=PVGYsIrFaSpXUH7hhH%2BgO1rGBXYYlKcxHLaNi9GT4IM%3D' \
-            -o output/argus-engineer.mp4
-          test -s output/argus-engineer.mp4
-          test "$(stat -c%s output/argus-engineer.mp4)" -gt 5000000
-
-      - name: Replace wrong Film 01
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f output/argus-engineer.mp4
-          git commit -m 'Replace Film 01 with approved uploaded video'
-          git push origin HEAD:1517-materials
+          f=output/argus-engineer.mp4
+          test -s "$f"
+          test "$(stat -c%s "$f")" -eq 9992946
+          echo '93c7b64e4b4a051598a6a2b6bc882436c4cd829fbd09e2d3933539d779314bf0  output/argus-engineer.mp4' | sha256sum -c -
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg >/dev/null
+          ffmpeg -v error -i "$f" -f null -
+          ffprobe -v error -show_entries format=duration,size -show_entries stream=codec_name,codec_type -of default=noprint_wrappers=1 "$f"
